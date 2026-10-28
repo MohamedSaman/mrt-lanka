@@ -1,0 +1,565 @@
+<?php
+
+namespace App\Livewire\Admin;
+
+use App\Livewire\Concerns\WithDynamicLayout;
+use App\Models\ReturnsProduct;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Title;
+use Livewire\Component;
+use Livewire\WithPagination;
+
+#[Title('Product Return')]
+class ReturnList extends Component
+{
+    use WithDynamicLayout, WithPagination;
+
+    // Do not store the full collection/paginator in a public property
+    public $returnsCount = 0;
+
+    public $returnSearch = '';
+
+    public $selectedReturn = null;
+
+    public $selectedReturnItems = [];
+
+    public $showReceiptModal = false;
+
+    public $currentReturnId = null;
+
+    public $perPage = 10;
+
+    // Properties for editing returns
+    public $showEditModal = false;
+
+    public $editingReturnItems = [];
+
+    public function mount()
+    {
+        // Load lightweight count; actual paginated data is returned from render()
+        $this->loadReturns();
+    }
+
+    private function getReturnsBaseQuery()
+    {
+        $query = ReturnsProduct::query();
+
+        // Filter by user for staff - only show returns for their own sales
+        if ($this->isStaff()) {
+            $query->whereHas('sale', function ($q) {
+                $q->where('user_id', Auth::id());
+            });
+        }
+
+        if (! empty($this->returnSearch)) {
+            $search = '%'.$this->returnSearch.'%';
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('sale', function ($sq) use ($search) {
+                    $sq->where('invoice_number', 'like', $search);
+                })->orWhereHas('product', function ($pq) use ($search) {
+                    $pq->where('name', 'like', $search)
+                        ->orWhere('code', 'like', $search);
+                });
+            });
+        }
+
+        return $query;
+    }
+
+    protected function loadReturns()
+    {
+        $this->returnsCount = $this->getReturnsBaseQuery()->distinct('sale_id')->count('sale_id');
+    }
+
+    public function updatedReturnSearch()
+    {
+        $this->resetPage();
+        $this->loadReturns();
+    }
+
+    public function showReturnDetails($saleId)
+    {
+        $this->selectedReturnItems = ReturnsProduct::with(['sale.customer', 'product.variant'])
+            ->where('sale_id', $saleId)
+            ->get();
+
+        if ($this->selectedReturnItems->isEmpty()) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No return records found for this invoice.']);
+
+            return;
+        }
+
+        $this->selectedReturn = $this->selectedReturnItems->first();
+        $this->dispatch('showModal', 'returnDetailsModal');
+    }
+
+    public function showReceipt($saleId)
+    {
+        $this->selectedReturnItems = ReturnsProduct::with(['sale.customer', 'product.variant'])
+            ->where('sale_id', $saleId)
+            ->get();
+
+        if ($this->selectedReturnItems->isEmpty()) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No return records found for this invoice.']);
+
+            return;
+        }
+
+        $this->selectedReturn = $this->selectedReturnItems->first();
+        $this->currentReturnId = $saleId;
+        $this->showReceiptModal = true;
+        $this->dispatch('showModal', 'receiptModal');
+    }
+
+    public function downloadReturn($saleId)
+    {
+        // For compatibility, we can generate a PDF of the receipt for this invoice
+        $returns = ReturnsProduct::with(['sale.customer', 'product.variant'])->where('sale_id', $saleId)->get();
+
+        if ($returns->isEmpty()) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Return records not found.']);
+
+            return;
+        }
+
+        try {
+            // Pass $returns to the PDF view
+            $pdf = PDF::loadView('admin.returns.return-receipt-pdf', compact('returns'));
+
+            $pdf->setPaper('a4', 'portrait');
+            $pdf->setOption('dpi', 150);
+            $pdf->setOption('defaultFont', 'sans-serif');
+
+            return response()->streamDownload(
+                function () use ($pdf) {
+                    echo $pdf->output();
+                },
+                'return-receipt-'.$saleId.'-'.now()->format('Y-m-d').'.pdf'
+            );
+        } catch (\Exception $e) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Failed to generate PDF: '.$e->getMessage()]);
+        }
+    }
+
+    public function printReceipt()
+    {
+        $this->dispatch('printReceipt');
+    }
+
+    public function deleteReturn($saleId)
+    {
+        $this->selectedReturnItems = ReturnsProduct::with(['product'])->where('sale_id', $saleId)->get();
+        if ($this->selectedReturnItems->isEmpty()) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Return records not found.']);
+
+            return;
+        }
+        $this->selectedReturn = $this->selectedReturnItems->first();
+        $this->currentReturnId = $saleId;
+        $this->dispatch('showModal', 'deleteReturnModal');
+    }
+
+    public function confirmDeleteReturn()
+    {
+        try {
+            if ($this->currentReturnId) {
+                $saleId = $this->currentReturnId;
+                $returns = ReturnsProduct::where('sale_id', $saleId)->get();
+
+                \DB::transaction(function () use ($returns, $saleId) {
+                    foreach ($returns as $return) {
+                        // Restore the stock before deleting the return record
+                        $this->restoreStock($return);
+                        $return->delete();
+                    }
+
+                    // Recalculate sale totals
+                    $this->recalculateSaleTotals($saleId);
+                });
+
+                // Refresh lightweight data and reset pagination if needed
+                $this->loadReturns();
+                $this->resetPage();
+
+                $this->dispatch('hideModal', 'deleteReturnModal');
+                $this->dispatch('showToast', ['type' => 'success', 'message' => 'Return records deleted successfully!']);
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Error deleting return: '.$e->getMessage()]);
+        }
+    }
+
+    public function editReturn($saleId)
+    {
+        $sale = \App\Models\Sale::find($saleId);
+        if (! $sale) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Sale record not found.']);
+
+            return;
+        }
+
+        $returns = ReturnsProduct::with(['product.variant'])->where('sale_id', $saleId)->get();
+        if ($returns->isEmpty()) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'No return records found for this invoice.']);
+
+            return;
+        }
+
+        $this->currentReturnId = $saleId;
+        $this->editingReturnItems = [];
+
+        foreach ($returns as $return) {
+            // Determine max qty available for this product on this sale
+            $saleItemQuery = \App\Models\SaleItem::where('sale_id', $return->sale_id)
+                ->where('product_id', $return->product_id);
+
+            if ($return->variant_id) {
+                $saleItemQuery->where('variant_id', $return->variant_id);
+            } else {
+                $saleItemQuery->whereNull('variant_id');
+            }
+
+            if ($return->variant_value) {
+                $saleItemQuery->where('variant_value', $return->variant_value);
+            } else {
+                $saleItemQuery->where(function ($q) {
+                    $q->whereNull('variant_value')
+                        ->orWhere('variant_value', '')
+                        ->orWhere('variant_value', 'null');
+                });
+            }
+
+            $saleItem = $saleItemQuery->first();
+            if (! $saleItem) {
+                $saleItem = \App\Models\SaleItem::where('sale_id', $return->sale_id)
+                    ->where('product_id', $return->product_id)
+                    ->first();
+            }
+
+            $originalQty = $saleItem ? $saleItem->quantity : $return->return_quantity;
+
+            // Count other returns for this product variant
+            $otherReturnsQuery = ReturnsProduct::where('sale_id', $return->sale_id)
+                ->where('product_id', $return->product_id)
+                ->where('id', '!=', $return->id);
+
+            if ($return->variant_id) {
+                $otherReturnsQuery->where('variant_id', $return->variant_id);
+            } else {
+                $otherReturnsQuery->whereNull('variant_id');
+            }
+
+            if ($return->variant_value) {
+                $otherReturnsQuery->where('variant_value', $return->variant_value);
+            } else {
+                $otherReturnsQuery->where(function ($q) {
+                    $q->whereNull('variant_value')
+                        ->orWhere('variant_value', '')
+                        ->orWhere('variant_value', 'null');
+                });
+            }
+
+            $otherReturnsSum = $otherReturnsQuery->sum('return_quantity');
+
+            $maxQty = $originalQty - $otherReturnsSum;
+
+            $productName = $return->product?->name ?? 'N/A';
+            if ($return->variant_value && $return->product && $return->product->variant) {
+                $productName .= ' ('.$return->product->variant->variant_name.': '.$return->variant_value.')';
+            } elseif ($return->variant_value) {
+                $productName .= ' ('.$return->variant_value.')';
+            }
+
+            $this->editingReturnItems[] = [
+                'id' => $return->id,
+                'product_name' => $productName,
+                'selling_price' => $return->selling_price,
+                'usable_qty' => $return->usable_quantity,
+                'damage_qty' => $return->damaged_quantity,
+                'notes' => $return->notes,
+                'max_qty' => $maxQty,
+            ];
+        }
+
+        $this->showEditModal = true;
+        $this->dispatch('showModal', 'editReturnModal');
+    }
+
+    public function updateReturn()
+    {
+        if (empty($this->editingReturnItems)) {
+            return;
+        }
+
+        // Validation
+        foreach ($this->editingReturnItems as $item) {
+            $usable = (int) $item['usable_qty'];
+            $damage = (int) $item['damage_qty'];
+            $totalReturn = $usable + $damage;
+
+            if ($usable < 0 || $damage < 0) {
+                $this->dispatch('showToast', ['type' => 'error', 'message' => 'Return quantity cannot be negative.']);
+
+                return;
+            }
+
+            if ($totalReturn > $item['max_qty']) {
+                $this->dispatch('showToast', [
+                    'type' => 'error',
+                    'message' => 'Total return quantity for '.$item['product_name'].' cannot exceed remaining invoice quantity: '.$item['max_qty'],
+                ]);
+
+                return;
+            }
+        }
+
+        try {
+            \DB::transaction(function () {
+                foreach ($this->editingReturnItems as $item) {
+                    $returnRecord = ReturnsProduct::find($item['id']);
+                    if (! $returnRecord) {
+                        continue;
+                    }
+
+                    $usable = (int) $item['usable_qty'];
+                    $damage = (int) $item['damage_qty'];
+                    $totalReturn = $usable + $damage;
+
+                    // 1. Revert previous stock adjustment
+                    $this->restoreStock($returnRecord);
+
+                    // 2. Apply new stock adjustment
+                    $this->applyStock($returnRecord, $usable, $damage);
+
+                    // 3. Update Return Record
+                    $returnAmount = $totalReturn * $returnRecord->selling_price;
+
+                    // Build notes
+                    $cleanNotes = preg_replace('/^((?:Usable|Damaged):\s*\d+(?:,\s*(?:Usable|Damaged):\s*\d+)?[\.,]\s*)+/i', '', $item['notes']);
+                    $notes = 'Customer return processed via system';
+                    if ($usable > 0 && $damage > 0) {
+                        $notes = "Usable: {$usable}, Damaged: {$damage}. ".$cleanNotes;
+                    } elseif ($usable > 0) {
+                        $notes = "Usable: {$usable}. ".$cleanNotes;
+                    } elseif ($damage > 0) {
+                        $notes = "Damaged: {$damage}. ".$cleanNotes;
+                    } else {
+                        $notes = $cleanNotes ?: $notes;
+                    }
+
+                    $returnRecord->update([
+                        'return_quantity' => $totalReturn,
+                        'usable_quantity' => $usable,
+                        'damaged_quantity' => $damage,
+                        'total_amount' => $returnAmount,
+                        'notes' => $notes,
+                    ]);
+                }
+
+                // 4. Recalculate Sale/Invoice Totals
+                if ($this->currentReturnId) {
+                    $this->recalculateSaleTotals($this->currentReturnId);
+                }
+            });
+
+            $this->loadReturns();
+            $this->closeModal();
+            $this->dispatch('showToast', ['type' => 'success', 'message' => 'Return record updated successfully!']);
+        } catch (\Exception $e) {
+            $this->dispatch('showToast', ['type' => 'error', 'message' => 'Error updating return: '.$e->getMessage()]);
+        }
+    }
+
+    private function applyStock($return, $usableQty, $damageQty)
+    {
+        $stock = null;
+        $productId = $return->product_id;
+        $variantId = $return->variant_id;
+        $variantValue = $return->variant_value;
+
+        if ($variantId || $variantValue) {
+            $stockQuery = \App\Models\ProductStock::where('product_id', $productId);
+            if ($variantId) {
+                $stockQuery->where('variant_id', $variantId);
+            }
+            if ($variantValue) {
+                $stockQuery->where('variant_value', $variantValue);
+            }
+            $stock = $stockQuery->first();
+        } else {
+            $stock = \App\Models\ProductStock::where('product_id', $productId)
+                ->where(function ($q) {
+                    $q->whereNull('variant_value')
+                        ->orWhere('variant_value', '')
+                        ->orWhere('variant_value', 'null');
+                })
+                ->whereNull('variant_id')
+                ->first();
+
+            if (! $stock) {
+                $stock = \App\Models\ProductStock::where('product_id', $productId)->first();
+            }
+        }
+
+        if ($stock) {
+            $totalQty = $usableQty + $damageQty;
+            $stock->available_stock += $usableQty;
+            $stock->damage_stock += $damageQty;
+            if ($stock->sold_count >= $totalQty) {
+                $stock->sold_count -= $totalQty;
+            }
+            $stock->updateTotals();
+        }
+    }
+
+    private function restoreStock($return)
+    {
+        $stock = null;
+        $productId = $return->product_id;
+        $variantId = $return->variant_id;
+        $variantValue = $return->variant_value;
+
+        if ($variantId || $variantValue) {
+            $stockQuery = \App\Models\ProductStock::where('product_id', $productId);
+            if ($variantId) {
+                $stockQuery->where('variant_id', $variantId);
+            }
+            if ($variantValue) {
+                $stockQuery->where('variant_value', $variantValue);
+            }
+            $stock = $stockQuery->first();
+        } else {
+            $stock = \App\Models\ProductStock::where('product_id', $productId)
+                ->where(function ($q) {
+                    $q->whereNull('variant_value')
+                        ->orWhere('variant_value', '')
+                        ->orWhere('variant_value', 'null');
+                })
+                ->whereNull('variant_id')
+                ->first();
+
+            if (! $stock) {
+                $stock = \App\Models\ProductStock::where('product_id', $productId)->first();
+            }
+        }
+
+        if ($stock) {
+            $usableQty = $return->usable_quantity ?? $return->return_quantity;
+            $damageQty = $return->damaged_quantity ?? 0;
+            $totalQty = $usableQty + $damageQty;
+
+            $stock->available_stock -= $usableQty;
+            $stock->damage_stock -= $damageQty;
+            $stock->sold_count += $totalQty;
+            $stock->updateTotals();
+        }
+    }
+
+    private function recalculateSaleTotals($saleId)
+    {
+        $sale = \App\Models\Sale::find($saleId);
+        if (! $sale) {
+            return;
+        }
+
+        // Get original subtotal (sum of items net price)
+        $originalSubtotal = \App\Models\SaleItem::where('sale_id', $sale->id)
+            ->get()
+            ->sum(function ($item) {
+                return (float) $item->total;
+            });
+
+        // Sum of all return amounts on this sale (at sold prices)
+        $totalReturnAmount = ReturnsProduct::where('sale_id', $sale->id)->sum('total_amount');
+
+        // New subtotal
+        $newSubtotal = max(0, $originalSubtotal - $totalReturnAmount);
+
+        // Recalculate additional discount
+        $additionalDiscountAmount = 0;
+        if ($sale->additional_discount_type === 'percentage' && $sale->additional_discount_percentage > 0) {
+            $additionalDiscountAmount = ($newSubtotal * $sale->additional_discount_percentage) / 100;
+        } elseif ($sale->additional_discount_type === 'fixed') {
+            if ($originalSubtotal > 0) {
+                $origAdditionalDiscount = max(0, (float) $sale->subtotal - (float) $sale->total_amount);
+                $additionalDiscountAmount = min($newSubtotal, round(($origAdditionalDiscount * $newSubtotal) / $originalSubtotal, 2));
+            }
+        }
+
+        // New total
+        $newTotal = max(0, $newSubtotal - $additionalDiscountAmount);
+
+        // Update sale
+        $previousTotal = (float) $sale->total_amount;
+        $totalReduction = max(0, $previousTotal - $newTotal);
+        $newDue = max(0, (float) $sale->due_amount - $totalReduction);
+
+        $returnedQtyByProduct = ReturnsProduct::where('sale_id', $sale->id)
+            ->get()
+            ->groupBy('product_id');
+
+        $remainingItemDiscounts = \App\Models\SaleItem::where('sale_id', $sale->id)
+            ->get()
+            ->sum(function ($item) use ($returnedQtyByProduct) {
+                $returned = $returnedQtyByProduct->has($item->product_id)
+                    ? $returnedQtyByProduct->get($item->product_id)->sum('return_quantity')
+                    : 0;
+                $remQty = max(0, $item->quantity - $returned);
+
+                return (float) ($item->discount_per_unit ?? 0) * $remQty;
+            });
+
+        $sale->update([
+            'subtotal' => $newSubtotal,
+            'discount_amount' => $remainingItemDiscounts + $additionalDiscountAmount,
+            'total_amount' => $newTotal,
+            'due_amount' => $newDue,
+            'payment_status' => $newTotal <= 0.01 ? 'paid' : ($newDue <= 0.01 ? 'paid' : ($newDue < $newTotal ? 'partial' : 'pending')),
+        ]);
+
+        // Sync customer balance
+        if ($sale->customer_id) {
+            \App\Services\CustomerBalanceService::syncCustomerBalance($sale->customer_id);
+        }
+    }
+
+    public function closeModal()
+    {
+        $this->selectedReturn = null;
+        $this->selectedReturnItems = [];
+        $this->currentReturnId = null;
+        $this->showReceiptModal = false;
+        $this->showEditModal = false;
+        $this->editingReturnItems = [];
+        $this->dispatch('hideModal', 'returnDetailsModal');
+        $this->dispatch('hideModal', 'deleteReturnModal');
+        $this->dispatch('hideModal', 'receiptModal');
+        $this->dispatch('hideModal', 'editReturnModal');
+    }
+
+    public function render()
+    {
+        $returns = $this->getReturnsBaseQuery()
+            ->select('sale_id')
+            ->selectRaw('SUM(usable_quantity) as total_usable')
+            ->selectRaw('SUM(damaged_quantity) as total_damaged')
+            ->selectRaw('SUM(total_amount) as total_return_amount')
+            ->selectRaw('MAX(created_at) as latest_return_date')
+            ->groupBy('sale_id')
+            ->orderByDesc('latest_return_date')
+            ->with(['sale.customer', 'sale.items'])
+            ->paginate($this->perPage);
+
+        return view('livewire.admin.return-list', [
+            'returns' => $returns,
+            'selectedReturn' => $this->selectedReturn,
+            'currentReturnId' => $this->currentReturnId,
+        ])->layout($this->layout);
+    }
+
+    public function updatedPerPage()
+    {
+        $this->resetPage();
+    }
+}

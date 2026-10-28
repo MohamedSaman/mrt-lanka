@@ -1,0 +1,919 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[x-cloak] {
+    display: none;
+}
+
+/* ========================================
+   MOBILE & TABLET RESPONSIVE STYLES
+   FOR ALL STAFF PAGES
+   ======================================== */
+
+/* Base Responsive Adjustments */
+@media (max-width: 767px) {
+    /* Container padding for mobile */
+    .container-fluid {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    /* Page Headers */
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .d-flex.justify-content-between > div {
+        width: 100%;
+    }
+
+    h3.fw-bold {
+        font-size: 1.5rem !important;
+    }
+
+    /* Cards */
+    .card {
+        margin-bottom: 1rem;
+        border-radius: 8px;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .card-header {
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+    }
+
+    /* Buttons */
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .btn-group .btn {
+        width: 100%;
+        border-radius: 0.375rem !important;
+    }
+
+    .d-flex.gap-2,
+    .d-flex.gap-3 {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+
+    .d-flex.gap-2 > *,
+    .d-flex.gap-3 > * {
+        width: 100% !important;
+    }
+
+    /* Modal Adjustments */
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+
+    .modal-body {
+        padding: 1rem;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+        margin: 0;
+    }
+
+    /* Form Controls */
+    .form-control,
+    .form-select {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 0.6rem 0.75rem;
+    }
+
+    .form-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.3rem;
+    }
+
+    /* Stat Cards */
+    .stat-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem !important;
+    }
+
+    .stat-label {
+        font-size: 0.8rem !important;
+    }
+
+    /* Search & Filter Sections */
+    .row.g-3 {
+        gap: 0.75rem !important;
+    }
+
+    .row.g-3 > [class*="col-"] {
+        padding-left: 0;
+        padding-right: 0;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Input Groups */
+    .input-group {
+        flex-wrap: nowrap;
+    }
+
+    .input-group .btn {
+        width: auto;
+        margin-bottom: 0;
+    }
+}
+
+/* Table Responsive */
+@media (max-width: 991px) {
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 1rem;
+    }
+
+    .table {
+        /* allow table to shrink on small screens; responsive container will enable scrolling when needed */
+        min-width: 0;
+        font-size: 0.875rem;
+        width: 100%;
+        table-layout: auto;
+    }
+
+    .table thead th {
+        font-size: 0.8rem;
+        padding: 0.5rem;
+        white-space: nowrap;
+    }
+
+    .table tbody td {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    /* Action buttons in tables */
+    .table .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    /* Mobile Table Card View Alternative */
+    .mobile-card-view {
+        display: block;
+    }
+
+    .mobile-card-view .card {
+        margin-bottom: 0.75rem;
+        border-left: 4px solid #0d6efd;
+    }
+
+    .mobile-card-view .card-body {
+        padding: 0.75rem;
+    }
+
+    .mobile-card-view .row {
+        margin-bottom: 0.5rem;
+    }
+
+    .mobile-card-view .row:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Tablet Specific (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+    .container-fluid {
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    /* Two column layouts on tablet */
+    .row > [class*="col-md-6"] {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    .row > [class*="col-md-4"] {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    /* Stat cards in 2 columns */
+    .stat-card {
+        min-height: 120px;
+    }
+
+    .btn {
+        width: auto;
+        margin-bottom: 0;
+    }
+
+    h3.fw-bold {
+        font-size: 1.75rem !important;
+    }
+}
+
+/* Search Results Dropdown Mobile */
+@media (max-width: 767px) {
+    .search-results-dropdown {
+        position: fixed !important;
+        left: 12px !important;
+        right: 12px !important;
+        top: auto !important;
+        max-height: 60vh !important;
+        z-index: 1055 !important;
+    }
+
+    .search-result-item {
+        padding: 1rem !important;
+    }
+
+    .search-result-item h6 {
+        font-size: 0.95rem;
+    }
+
+    .search-result-item p {
+        font-size: 0.8rem;
+    }
+
+    .search-result-item .btn {
+        width: auto;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Cart & Quotation Items Mobile */
+@media (max-width: 767px) {
+    .cart-item,
+    .quotation-item {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
+    .cart-item > div,
+    .quotation-item > div {
+        width: 100%;
+    }
+
+    /* Quantity controls */
+    .input-group-sm {
+        width: 100%;
+    }
+
+    .input-group-sm .form-control {
+        flex: 1;
+    }
+
+    /* Price displays */
+    .text-end {
+        text-align: left !important;
+    }
+
+    /* Totals section */
+    .totals-section {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    /* Cart table optimizations */
+    .table.table-hover tbody td {
+        padding: 0.4rem 0.25rem;
+        font-size: 0.75rem;
+    }
+
+    .table.table-hover thead th {
+        padding: 0.4rem 0.25rem;
+        font-size: 0.7rem;
+        white-space: normal;
+    }
+
+    /* Hide wide columns in cart on mobile */
+    .table-hover th[width="120"],
+    .table-hover td:nth-child(3),
+    .table-hover td:nth-child(4),
+    .table-hover td:nth-child(5) {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.15rem;
+    }
+
+    /* Cart product info */
+    .table-hover td strong {
+        font-size: 0.8rem;
+        display: block;
+    }
+
+    .table-hover .text-muted.small {
+        font-size: 0.65rem;
+    }
+
+    /* Input in cart table */
+    .form-control-sm {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.35rem;
+    }
+
+    .input-group-sm {
+        font-size: 0.75rem;
+    }
+
+    .input-group-sm .btn {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.7rem;
+        width: auto;
+        margin-bottom: 0;
+    }
+
+    .input-group-sm .form-control {
+        padding: 0.25rem 0.35rem;
+        font-size: 0.75rem;
+    }
+
+    /* Discount section in cart */
+    .table-light tr td {
+        padding: 0.35rem 0.25rem;
+        font-size: 0.75rem;
+    }
+
+    /* Invoice/Receipt Mobile - override previous styles */
+    .invoice-info-row {
+        font-size: 0.75rem;
+        flex-direction: column;
+    }
+
+    .invoice-info-row .col-6 {
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+
+    .invoice-info-row .text-end {
+        text-align: left !important;
+    }
+
+    .invoice-info-row table {
+        width: 100% !important;
+        display: table !important;
+    }
+
+    .invoice-info-row td {
+        padding: 0.25rem 0 !important;
+        font-size: 0.7rem;
+    }
+
+    /* Ensure responsive tables can shrink on very small screens and inputs don't overflow */
+    .table-responsive .table {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    /* Make quantity/controls compact and flexible */
+    .table td .input-group,
+    .table td .quantity-control {
+        display: flex;
+        gap: 0.25rem;
+        align-items: center;
+        max-width: 140px;
+    }
+
+    .table td .input-group .form-control,
+    .table td .quantity-control input {
+        max-width: 70px;
+        text-align: center;
+    }
+
+    /* Totals area stack better on narrow screens */
+    .totals-row td {
+        white-space: nowrap;
+    }
+
+    .totals-row td.text-end {
+        text-align: left !important;
+    }
+
+    /* Receipt header mobile */
+    .screen-only-header {
+        flex-wrap: wrap;
+    }
+
+    .screen-only-header > div {
+        min-width: 100%;
+    }
+
+    .screen-only-header [style*="flex: 0 0 150px"] {
+        flex: 0 0 60px !important;
+    }
+
+    .screen-only-header img {
+        max-height: 50px !important;
+    }
+
+    .screen-only-header h2 {
+        font-size: 1.25rem !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    .screen-only-header p {
+        font-size: 0.7rem;
+    }
+
+    .screen-only-header h6 {
+        font-size: 0.8rem;
+    }
+}
+
+/* Navigation & Sidebar Mobile */
+@media (max-width: 767px) {
+    /* Breadcrumbs */
+    .breadcrumb {
+        font-size: 0.8rem;
+        padding: 0.5rem 0;
+    }
+
+    /* Tabs */
+    .nav-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-tabs .nav-link {
+        white-space: nowrap;
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+
+    /* Content Tabs */
+    .content-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0.5rem;
+    }
+
+    .content-tab {
+        font-size: 0.85rem;
+        padding: 0.5rem 1rem;
+        white-space: nowrap;
+    }
+}
+
+/* Filter & Date Range Pickers Mobile */
+@media (max-width: 767px) {
+    .date-range-picker,
+    .filter-group {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .date-range-picker > *,
+    .filter-group > * {
+        width: 100%;
+    }
+
+    .date-range-picker .btn,
+    .filter-group .btn {
+        width: 100%;
+    }
+
+    /* Date inputs */
+    input[type="date"],
+    input[type="datetime-local"] {
+        font-size: 16px; /* Prevents zoom */
+    }
+}
+
+/* Badge & Pill Adjustments */
+@media (max-width: 767px) {
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .badge.rounded-pill {
+        padding: 0.25rem 0.65rem;
+    }
+}
+
+/* Alert Messages Mobile */
+@media (max-width: 767px) {
+    .alert {
+        font-size: 0.875rem;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .alert i {
+        font-size: 1rem;
+    }
+
+    .alert .btn-close {
+        padding: 0.5rem;
+    }
+}
+
+/* Pagination Mobile */
+@media (max-width: 767px) {
+    .pagination {
+        font-size: 0.875rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .pagination .page-link {
+        padding: 0.4rem 0.65rem;
+        margin: 0.1rem;
+    }
+
+    .pagination .page-item:first-child .page-link,
+    .pagination .page-item:last-child .page-link {
+        border-radius: 0.375rem;
+    }
+}
+
+/* Dropdown Menu Mobile */
+@media (max-width: 767px) {
+    .dropdown-menu {
+        width: 100%;
+        max-width: 100%;
+        font-size: 0.9rem;
+    }
+
+    .dropdown-item {
+        padding: 0.6rem 1rem;
+    }
+}
+
+/* Customer/Product Info Cards Mobile */
+@media (max-width: 767px) {
+    .info-card,
+    .customer-card,
+    .product-card {
+        padding: 0.75rem;
+    }
+
+    .info-card .row,
+    .customer-card .row,
+    .product-card .row {
+        flex-direction: column;
+    }
+
+    .info-card .col-6,
+    .customer-card .col-6,
+    .product-card .col-6 {
+        width: 100%;
+        max-width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .info-card .text-end,
+    .customer-card .text-end,
+    .product-card .text-end {
+        text-align: left !important;
+    }
+}
+
+/* Invoice/Receipt Preview Mobile */
+@media (max-width: 767px) {
+    .invoice-preview,
+    .receipt-preview,
+    .quotation-preview {
+        padding: 1rem !important;
+        font-size: 0.85rem;
+    }
+
+    .invoice-preview h2,
+    .receipt-preview h2,
+    .quotation-preview h2 {
+        font-size: 1.5rem !important;
+    }
+
+    .invoice-preview h5,
+    .receipt-preview h5,
+    .quotation-preview h5 {
+        font-size: 1rem !important;
+    }
+
+    .invoice-preview img,
+    .receipt-preview img,
+    .quotation-preview img {
+        max-width: 80px !important;
+    }
+
+    .invoice-table,
+    .receipt-table,
+    .quotation-table {
+        font-size: 0.75rem;
+    }
+
+    .invoice-table th,
+    .invoice-table td,
+    .receipt-table th,
+    .receipt-table td,
+    .quotation-table th,
+    .quotation-table td {
+        padding: 0.4rem !important;
+    }
+
+    /* Signature section */
+    .signature-section {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .signature-box {
+        width: 100%;
+    }
+}
+
+/* Dashboard Charts Mobile */
+@media (max-width: 767px) {
+    .chart-container {
+        height: 250px !important;
+        margin-bottom: 1rem;
+    }
+
+    canvas {
+        max-height: 250px;
+    }
+}
+
+/* Loading & Empty States */
+@media (max-width: 767px) {
+    .loading-spinner {
+        width: 35px;
+        height: 35px;
+    }
+
+    .empty-state {
+        padding: 2rem 1rem;
+    }
+
+    .empty-state i {
+        font-size: 3rem !important;
+    }
+
+    .empty-state h5 {
+        font-size: 1.1rem;
+    }
+
+    .empty-state p {
+        font-size: 0.9rem;
+    }
+}
+
+/* Fix for horizontal scroll issues */
+@media (max-width: 767px) {
+    body {
+        overflow-x: hidden;
+    }
+
+    .row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .row > * {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    /* Prevent text overflow */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    p {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+}
+
+/* Touch-friendly improvements */
+@media (max-width: 991px) {
+    /* Larger tap targets */
+    a,
+    button,
+    .btn,
+    .clickable {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Better spacing for touch */
+    .btn + .btn {
+        margin-left: 0.5rem;
+    }
+
+    /* Smooth scrolling */
+    * {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Better form controls for touch */
+    input,
+    select,
+    textarea {
+        font-size: 16px !important; /* Prevents iOS zoom */
+    }
+
+    /* Checkbox and radio larger hit areas */
+    .form-check {
+        padding-left: 2rem;
+    }
+
+    .form-check-input {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-top: 0.125rem;
+    }
+
+    .form-check-label {
+        padding-left: 0.5rem;
+    }
+}
+
+/* Landscape Phone Adjustments */
+@media (max-width: 767px) and (orientation: landscape) {
+    .modal-dialog {
+        max-height: 90vh;
+    }
+
+    .modal-body {
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .stat-card {
+        padding: 0.75rem;
+    }
+
+    .stat-value {
+        font-size: 1.25rem !important;
+    }
+}
+
+/* Receipt Modal Mobile Optimization */
+@media (max-width: 767px) {
+    .invoice-footer {
+        margin-top: 1rem !important;
+        padding: 0.5rem 0 !important;
+    }
+
+    .signature-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .signature-section .col-12 {
+        flex: 1 1 100%;
+        padding: 0.25rem !important;
+    }
+
+    .invoice-footer .border-top {
+        padding-top: 0.75rem !important;
+        margin-top: 0.75rem !important;
+        border-color: #dee2e6 !important;
+    }
+
+    .invoice-footer p {
+        margin-bottom: 0.25rem !important;
+        word-break: break-word;
+    }
+
+    .modal-footer {
+        gap: 0.5rem !important;
+        padding: 0.75rem !important;
+    }
+
+    .modal-footer .btn {
+        flex: 1 1 auto;
+        min-width: 100px !important;
+        font-size: 0.8rem !important;
+        padding: 0.4rem 0.5rem !important;
+        white-space: nowrap;
+    }
+
+    .modal-footer .btn i {
+        margin-right: 0.3rem !important;
+    }
+
+    /* Invoice totals on mobile */
+    .totals-row td {
+        padding: 0.4rem 0.25rem !important;
+    }
+
+    .grand-total td {
+        padding: 0.5rem 0.25rem !important;
+        border-top: 2px solid #dee2e6 !important;
+    }
+}
+
+/* Tablet Adjustments (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+    .signature-section .col-md-4 {
+        padding: 0 0.5rem !important;
+    }
+
+    .modal-footer {
+        gap: 1rem !important;
+    }
+}
+
+/* Receipt Modal Footer on Larger Screens */
+@media (min-width: 992px) {
+    .invoice-footer {
+        margin-top: 2rem !important;
+    }
+
+    .signature-section {
+        display: flex;
+        justify-content: space-around;
+    }
+
+    .modal-footer .btn {
+        min-width: 150px;
+    }
+}
+
+/* Print Media Queries */
+@media print {
+    .btn,
+    .form-control,
+    .card-header,
+    .modal-footer,
+    .navbar,
+    .sidebar {
+        display: none !important;
+    }
+
+    .card {
+        border: none;
+        box-shadow: none;
+    }
+
+    body {
+        font-size: 12pt;
+    }
+
+    .table {
+        font-size: 10pt;
+    }
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .card {
+        border-width: 2px;
+    }
+
+    .btn {
+        border-width: 2px;
+    }
+
+    .table {
+        border-width: 2px;
+    }
+}
